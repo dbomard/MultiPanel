@@ -1,31 +1,29 @@
-import pywinusb.hid as hid
-from ctypes import c_ubyte
+import pyhidapi as hid
+
+hid.hid_init()
 
 
-def inputHandle(self):
-    pass
-
-
-class MPDevice():
+class HidMultiPanel:
 
     def __init__(self):
-        # search for a panel connected
-        hidPanel = hid.HidDeviceFilter(vendor_id=0x06A3, product_id=0x0D06).get_devices()[0]
-        # if panel found, initialize
-        if hidPanel:
-            hidPanel.open()
-            physicalDescriptor = hidPanel.get_physical_descriptor()
-            nbFeatureReports = hidPanel.count_all_feature_reports()
-            featReports = hidPanel.find_feature_reports()
-            dt = [c_ubyte(0x00)] * 13
-            for report in featReports:
-                report.set_raw_data(dt)
-                report.send()
-                print(report.get())
-            hidPanel.add_event_handler(hid.get_full_usage_id(0x08,0x00), inputHandle)
-            hidPanel.close()
+        try:
+            print('opening device')
+            self._h = hid.hid_open(0x06a3, 0x0d06)
+            buf = [0x0] * 13
+            res = hid.hid_get_feature_report(self._h, buf)
+            print(res)
+            hid.hid_set_nonblocking(self._h, True)
+            bufread = [0] * 4
+            res = hid.hid_read(self._h, bufread)
+            print("{0:08b} {1:08b} {2:08b}".format(res[0], res[1], res[2]))
+            hid.hid_set_nonblocking(self._h, False)
+            hid.hid_close(self._h)
+        except IOError as ex:
+            print(ex)
+            self._h.close()
 
 
 if __name__ == '__main__':
-    myDevice = MPDevice()
-    print(myDevice)
+    MPanel = HidMultiPanel()
+
+    print()

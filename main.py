@@ -1,29 +1,10 @@
-import pyhidapi as hid
-
-hid.hid_init()
-
-
-class HidMultiPanel:
-
-    def __init__(self):
-        try:
-            print('opening device')
-            self._h = hid.hid_open(0x06a3, 0x0d06)
-            buf = [0x0] * 13
-            res = hid.hid_get_feature_report(self._h, buf)
-            print(res)
-            hid.hid_set_nonblocking(self._h, True)
-            bufread = [0] * 4
-            res = hid.hid_read(self._h, bufread)
-            print("{0:08b} {1:08b} {2:08b}".format(res[0], res[1], res[2]))
-            hid.hid_set_nonblocking(self._h, False)
-            hid.hid_close(self._h)
-        except IOError as ex:
-            print(ex)
-            self._h.close()
-
+import hidapi as hid
 
 if __name__ == '__main__':
-    MPanel = HidMultiPanel()
-
-    print()
+    MPanel = hid.Device(vendor_id=0x06a3, product_id=0x0d06)
+    datas = MPanel.read(4, blocking=False)
+    datas = [0,1,2,3,4,5,6,7,8,9,1,2,3,0]
+    buf = bytearray(datas)
+    featurerpt = MPanel.send_feature_report(bytes(buf),report_id=bytes(1))
+    print(MPanel)
+    MPanel.close()

@@ -1,4 +1,5 @@
-from hidapi import Device
+import hid
+
 from DataRead import DataRead
 
 # button Messages
@@ -43,16 +44,56 @@ MP_READ_TRIM_UP = 0x00080000
 MP_READ_NOMSG = 0xFFFFFFFF
 
 
+def toggle_bit(c, pos):
+    return (c ^ (0x01 << pos))
+
+
+def set_bit(c, pos):
+    return (c | (0x01 << pos))
+
+
+def clear_bit(c, pos):
+    return (c & ~(0x01 << pos))
+
+
+def get_bit(c, pos):
+    return (c & (0x01 << pos))
+
+
+MP_LED_PLUS_SIGN = 0x0A
+MP_LED_MINUS_SIGN = 0x0E
+
+MP_AP_OFF = 0
+MP_AP_ON = 1
+MP_AP_ARMED = 2
+
+MP_BTN_OFF = 0
+MP_BTN_ARMED = 1
+MP_BTN_CAPT = 2
+
+mp_blank_panel = [0x00, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x00, 0x00]
+mp_zero_panel = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+
 class Mpanel():
     def __init__(self):
         # call parent class with ref to Multi Panel
         try:
-            self._hid = Device(vendor_id=0x06a3, product_id=0x0d06, blocking=False)
+            self._hid = hid.device()
+            self._hid.open(0x06a3, 0x0d06)
+            print("Manufacturer: %s" % self._hid.get_manufacturer_string())
+            # read initial setup
+            self._hid.set_nonblocking(1)
+            readBuffer = self._hid.read(4)
+            # reset screen and buttons
+            res = self._hid.send_feature_report(mp_blank_panel)
+            buf = self._hid.get_feature_report(9, 13)
+            print(str(res) + ' ' + str(buf))
+            self._hid.set_nonblocking(0)
             self._launchDataRead()
         except IOError:
             print("No Multi Panel found")
             exit(1)
-
 
     def __del__(self):
         self._loop.join()
@@ -62,6 +103,6 @@ class Mpanel():
         self._loop = DataRead(self._hid)
         self._loop.start()
 
-    def Btn_down(self):
+    def Message(self,msg):
         pass
-        # TODO : Gestion d
+        # TODO
